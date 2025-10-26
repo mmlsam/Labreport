@@ -26,6 +26,8 @@ class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(32), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    llm_model = db.Column(db.String(128), nullable=True)
+    llm_api_key = db.Column(db.String(512), nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)

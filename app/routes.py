@@ -27,6 +27,11 @@ from .services import annotate_report, evaluate_report
 
 
 ALLOWED_EXTENSIONS = {"docx"}
+AVAILABLE_LLM_MODELS = [
+    ("gpt-4o-mini", "GPT-4o Mini"),
+    ("gpt-4o", "GPT-4o"),
+    ("gpt-3.5-turbo", "GPT-3.5 Turbo"),
+]
 
 
 def allowed_file(filename: str) -> bool:
@@ -53,6 +58,7 @@ def init_default_admin() -> None:
     if not Admin.query.filter_by(username="admin").first():
         admin = Admin(username="admin")
         admin.set_password("admin123")
+        admin.llm_model = AVAILABLE_LLM_MODELS[0][0]
         db.session.add(admin)
         db.session.commit()
 
@@ -125,13 +131,48 @@ def dashboard():
         exp.id: ReportSubmission.query.filter_by(experiment_id=exp.id).count() for exp in experiments
     }
     students = Student.query.order_by(Student.student_number).all()
+    current_admin = Admin.query.get(session.get("admin_id"))
+    if current_admin is None:
+        current_admin = Admin.query.first()
     return render_template(
         "admin_dashboard.html",
         experiments=experiments,
         student_count=student_count,
         submission_counts=submission_counts,
         students=students,
+        available_llm_models=AVAILABLE_LLM_MODELS,
+        current_admin=current_admin,
     )
+
+
+@admin_bp.route("/settings/llm", methods=["POST"])
+@login_required("admin")
+def update_llm_settings():
+    admin = Admin.query.get_or_404(session.get("admin_id"))
+    model = request.form.get("llm_model", "").strip()
+    api_key = request.form.get("llm_api_key", "").strip()
+    clear_key = request.form.get("clear_api_key") == "on"
+
+    valid_models = {value for value, _ in AVAILABLE_LLM_MODELS}
+    if model and model not in valid_models:
+        flash("所选模型无效", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    if model:
+        admin.llm_model = model
+
+    if not admin.llm_api_key and not api_key and not clear_key:
+        flash("请填写有效的OpenAI API Key以启用自动批改", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    if clear_key:
+        admin.llm_api_key = None
+    elif api_key:
+        admin.llm_api_key = api_key
+
+    db.session.commit()
+    flash("模型配置已更新", "success")
+    return redirect(url_for("admin.dashboard"))
 
 
 @admin_bp.route("/experiments", methods=["POST"])
@@ -346,7 +387,13 @@ def submit_report(experiment_id: int):
         stored_path = upload_folder / stored_name
         file.save(stored_path)
 
-        score, feedback = evaluate_report(stored_path)
+        admin_settings = Admin.query.filter(Admin.llm_api_key.isnot(None)).first()
+        if admin_settings is None:
+            admin_settings = Admin.query.first()
+        llm_model = admin_settings.llm_model if admin_settings else None
+        llm_api_key = admin_settings.llm_api_key if admin_settings else None
+
+        score, feedback = evaluate_report(stored_path, model=llm_model, api_key=llm_api_key)
         processed_path = annotate_report(
             stored_path,
             score,

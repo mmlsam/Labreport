@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
+from sqlalchemy import inspect, text
 
 
 db = SQLAlchemy()
@@ -41,5 +42,25 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     with app.app_context():
         db.create_all()
+        _ensure_admin_llm_columns()
 
     return app
+
+
+def _ensure_admin_llm_columns() -> None:
+    """Ensure newly added LLM configuration columns exist for the admin table."""
+
+    inspector = inspect(db.engine)
+    columns = {column["name"] for column in inspector.get_columns("admin")}
+    statements: list[str] = []
+    if "llm_model" not in columns:
+        statements.append("ALTER TABLE admin ADD COLUMN llm_model VARCHAR(128)")
+    if "llm_api_key" not in columns:
+        statements.append("ALTER TABLE admin ADD COLUMN llm_api_key VARCHAR(512)")
+
+    if not statements:
+        return
+
+    with db.engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))

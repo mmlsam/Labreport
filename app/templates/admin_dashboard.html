@@ -21,6 +21,48 @@
   <div class="col-lg-4">
     <div class="card h-100">
       <div class="card-body">
+        <h5 class="card-title">模型配置</h5>
+        <p class="card-text text-muted">设置用于批改实验报告的大模型与API Key。</p>
+        <p class="small text-muted mb-3">当前状态：
+          {% if current_admin and current_admin.llm_api_key %}
+          <span class="text-success">已配置</span>
+          {% else %}
+          <span class="text-danger">未配置</span>
+          {% endif %}
+        </p>
+        <form method="post" action="{{ url_for('admin.update_llm_settings') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" for="llm_model">评测模型</label>
+            <select class="form-select" id="llm_model" name="llm_model">
+              {% for value, label in available_llm_models %}
+              <option value="{{ value }}" {% if current_admin and current_admin.llm_model == value %}selected{% endif %}>{{ label }} ({{ value }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="llm_api_key">OpenAI API Key</label>
+            <input class="form-control" id="llm_api_key" name="llm_api_key" type="password" placeholder="sk-..." autocomplete="off">
+            <div class="form-text">
+              {% if current_admin and current_admin.llm_api_key %}
+              已保存密钥，留空表示不更改。
+              {% else %}
+              保存后系统将使用OpenAI ChatGPT接口生成客观分数与评语。
+              {% endif %}
+            </div>
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" id="clear_api_key" name="clear_api_key" type="checkbox">
+            <label class="form-check-label" for="clear_api_key">清除已保存的API Key</label>
+          </div>
+          <button class="btn btn-secondary" type="submit">保存模型配置</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
         <h5 class="card-title">新建实验</h5>
         <form method="post" action="{{ url_for('admin.create_experiment') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
