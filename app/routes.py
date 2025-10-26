@@ -124,11 +124,13 @@ def dashboard():
     submission_counts = {
         exp.id: ReportSubmission.query.filter_by(experiment_id=exp.id).count() for exp in experiments
     }
+    students = Student.query.order_by(Student.student_number).all()
     return render_template(
         "admin_dashboard.html",
         experiments=experiments,
         student_count=student_count,
         submission_counts=submission_counts,
+        students=students,
     )
 
 
@@ -191,6 +193,87 @@ def import_students():
     db.session.commit()
     flash(f"成功导入学生：新增 {created} 人，更新 {updated} 人", "success")
     return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/students/<int:student_id>/update", methods=["POST"])
+@login_required("admin")
+def update_student(student_id: int):
+    student = Student.query.get_or_404(student_id)
+    name = request.form.get("name", "").strip()
+    password = request.form.get("password", "").strip()
+    if not name:
+        flash("学生姓名不能为空", "warning")
+        return redirect(url_for("admin.dashboard"))
+    student.name = name
+    if password:
+        student.set_password(password)
+    db.session.commit()
+    flash("学生信息已更新", "success")
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/password", methods=["GET", "POST"], endpoint="change_password")
+@login_required("admin")
+def admin_change_password():
+    admin = Admin.query.get_or_404(session.get("admin_id"))
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not admin.check_password(current_password):
+            flash("当前密码错误", "danger")
+        elif not new_password:
+            flash("新密码不能为空", "warning")
+        elif new_password != confirm_password:
+            flash("两次输入的新密码不一致", "warning")
+        else:
+            admin.set_password(new_password)
+            db.session.commit()
+            flash("密码修改成功", "success")
+            return redirect(url_for("admin.dashboard"))
+
+    return render_template(
+        "change_password.html",
+        title="修改管理员密码",
+        heading="修改管理员密码",
+        submit_text="更新密码",
+    )
+
+
+@admin_bp.route("/summary")
+@login_required("admin")
+def submissions_summary():
+    experiments = Experiment.query.order_by(Experiment.id).all()
+    students = Student.query.order_by(Student.student_number).all()
+    submissions = ReportSubmission.query.all()
+    submission_map = {(sub.student_id, sub.experiment_id): sub for sub in submissions}
+
+    rows = []
+    for student in students:
+        cells = []
+        scores: list[float] = []
+        for experiment in experiments:
+            submission = submission_map.get((student.id, experiment.id))
+            cells.append(submission)
+            if submission and submission.score is not None:
+                scores.append(submission.score)
+        avg_score = round(sum(scores) / len(scores), 2) if scores else None
+        completed = sum(1 for submission in cells if submission is not None)
+        rows.append(
+            {
+                "student": student,
+                "cells": cells,
+                "avg_score": avg_score,
+                "completed": completed,
+            }
+        )
+
+    return render_template(
+        "submission_summary.html",
+        experiments=experiments,
+        rows=rows,
+    )
 
 
 @admin_bp.route("/experiments/<int:experiment_id>/export")
@@ -295,6 +378,35 @@ def submit_report(experiment_id: int):
         return redirect(url_for("student.dashboard"))
 
     return render_template("submit_report.html", experiment=experiment, submission=submission)
+
+
+@student_bp.route("/password", methods=["GET", "POST"], endpoint="change_password")
+@login_required("student")
+def student_change_password():
+    student = Student.query.get_or_404(session.get("student_id"))
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not student.check_password(current_password):
+            flash("当前密码错误", "danger")
+        elif not new_password:
+            flash("新密码不能为空", "warning")
+        elif new_password != confirm_password:
+            flash("两次输入的新密码不一致", "warning")
+        else:
+            student.set_password(new_password)
+            db.session.commit()
+            flash("密码修改成功", "success")
+            return redirect(url_for("student.dashboard"))
+
+    return render_template(
+        "change_password.html",
+        title="修改学生密码",
+        heading="修改登录密码",
+        submit_text="更新密码",
+    )
 
 
 @student_bp.route("/download/<int:submission_id>")

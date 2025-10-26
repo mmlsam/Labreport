@@ -72,4 +72,43 @@
     {% endfor %}
   </div>
 </div>
+<div class="mt-5">
+  <h3>学生名单</h3>
+  <p class="text-muted">导入后可在此快速修改学生姓名或重置密码，留空密码表示不修改。</p>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th scope="col">学号</th>
+          <th scope="col">姓名</th>
+          <th scope="col">重置密码</th>
+          <th scope="col" class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in students %}
+        <tr>
+          <td>{{ student.student_number }}</td>
+          <td>
+            <input class="form-control" form="student-form-{{ student.id }}" name="name" value="{{ student.name }}" required>
+          </td>
+          <td>
+            <input class="form-control" form="student-form-{{ student.id }}" type="password" name="password" placeholder="输入新密码（可选）">
+          </td>
+          <td class="text-end">
+            <form id="student-form-{{ student.id }}" method="post" action="{{ url_for('admin.update_student', student_id=student.id) }}" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-primary" type="submit">保存</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td class="text-center" colspan="4">暂无学生信息，请先导入。</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
