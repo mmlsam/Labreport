@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}管理员中心 - 实验报告管理平台{% endblock %}
+{% block content %}
+<h2 class="mb-4">管理员控制台</h2>
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">学生导入</h5>
+        <p class="card-text">通过Excel导入学生名单，Excel需包含 student_number、name、password 列。</p>
+        <form method="post" action="{{ url_for('admin.import_students') }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <input class="form-control" type="file" name="file" accept=".xlsx,.xls" required>
+          </div>
+          <button class="btn btn-primary" type="submit">导入学生</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">新建实验</h5>
+        <form method="post" action="{{ url_for('admin.create_experiment') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" for="name">实验名称</label>
+            <input class="form-control" id="name" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="description">实验说明</label>
+            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+          </div>
+          <button class="btn btn-success" type="submit">创建实验</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">统计信息</h5>
+        <p>当前学生人数：<strong>{{ student_count }}</strong></p>
+        <ul class="list-group">
+          {% for exp in experiments %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ exp.name }}</span>
+            <span class="badge bg-primary rounded-pill">{{ submission_counts[exp.id] }}</span>
+          </li>
+          {% else %}
+          <li class="list-group-item">尚未创建实验</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="mt-5">
+  <h3>实验列表</h3>
+  <div class="list-group">
+    {% for exp in experiments %}
+    <a class="list-group-item list-group-item-action" href="{{ url_for('admin.view_experiment', experiment_id=exp.id) }}">
+      <div class="d-flex w-100 justify-content-between">
+        <h5 class="mb-1">{{ exp.name }}</h5>
+        <small>{{ submission_counts[exp.id] }} 份提交</small>
+      </div>
+      <p class="mb-1 text-muted">{{ exp.description }}</p>
+    </a>
+    {% else %}
+    <div class="list-group-item">暂无实验，请先创建。</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

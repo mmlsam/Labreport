@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}提交实验报告 - {{ experiment.name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h2 class="mb-3">{{ experiment.name }}</h2>
+    <p class="text-muted">{{ experiment.description }}</p>
+    <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label" for="file">上传Word实验报告 (.docx)</label>
+        <input class="form-control" type="file" name="file" id="file" accept=".docx" required>
+      </div>
+      <button class="btn btn-primary" type="submit">提交</button>
+      <a class="btn btn-link" href="{{ url_for('student.dashboard') }}">返回</a>
+    </form>
+    {% if submission %}
+    <div class="alert alert-info mt-4">
+      <h5>最近一次提交</h5>
+      <p>提交时间：{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}</p>
+      <p>成绩：{{ submission.score }}</p>
+      <p>评语：{{ submission.feedback }}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

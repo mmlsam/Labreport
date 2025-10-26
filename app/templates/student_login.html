@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}学生登录 - 实验报告管理平台{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-4">
+    <h2 class="mb-4">学生登录</h2>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label for="student_number" class="form-label">学号</label>
+        <input type="text" class="form-control" id="student_number" name="student_number" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">密码</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">登录</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
