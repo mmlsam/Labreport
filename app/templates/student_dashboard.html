@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}学生中心 - 实验报告管理平台{% endblock %}
+{% block content %}
+<h2 class="mb-4">欢迎，{{ student.name }}（{{ student.student_number }}）</h2>
+<div class="row row-cols-1 row-cols-md-2 g-4">
+  {% for experiment in experiments %}
+  {% set submission = submissions.get(experiment.id) %}
+  <div class="col">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">{{ experiment.name }}</h5>
+        <p class="card-text text-muted">{{ experiment.description }}</p>
+        {% if submission %}
+        <p class="mb-2">上次提交：{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}</p>
+        <p class="mb-2">成绩：<strong>{{ submission.score }}</strong></p>
+        <p class="mb-3">评语：{{ submission.feedback }}</p>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('student.download_report', submission_id=submission.id) }}">下载带评语的报告</a>
+        {% else %}
+        <p class="text-muted">尚未提交实验报告。</p>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-transparent border-0 text-end">
+        <a class="btn btn-primary" href="{{ url_for('student.submit_report', experiment_id=experiment.id) }}">{{ '重新提交' if submission else '提交报告' }}</a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col">
+    <div class="alert alert-info">尚未发布实验。</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
