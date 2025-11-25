@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>实验报告提交与批改</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f6f6f6; }
+    header { background: #1d4ed8; color: white; padding: 16px; }
+    main { padding: 20px; max-width: 960px; margin: auto; }
+    section { background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; }
+    label { display: block; margin-bottom: 6px; }
+    input, button, textarea { padding: 8px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+    button { width: auto; background: #1d4ed8; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #163ca3; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border-bottom: 1px solid #ddd; text-align: left; }
+    .status { font-weight: bold; color: green; }
+    .card { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .half { width: 100%; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>学生实验报告批改平台</h1>
+  </header>
+  <main>
+    <section id="login-section">
+      <h2>学生登陆</h2>
+      <label>学号</label>
+      <input id="login-student-no" placeholder="20240001" />
+      <label>密码</label>
+      <input id="login-password" type="password" placeholder="默认密码" />
+      <button onclick="login()">登陆</button>
+      <div id="login-status" class="status"></div>
+    </section>
+
+    <section id="import-section">
+      <h2>批量导入学生</h2>
+      <p>支持JSON格式: <code>[{"student_no":"20240001","name":"张三"},...]</code></p>
+      <label>默认密码</label>
+      <input id="default-password" value="123456" />
+      <label>学生列表</label>
+      <textarea id="students-json" rows="4" placeholder='[{"student_no":"20240001","name":"张三"}]'></textarea>
+      <button onclick="importStudents()">导入学生</button>
+      <div id="import-status" class="status"></div>
+    </section>
+
+    <section id="upload-section">
+      <h2>上传实验报告 (Word)</h2>
+      <input type="file" id="report-file" accept=".docx" />
+      <button onclick="uploadReport()">提交并批改</button>
+      <div id="upload-status" class="status"></div>
+    </section>
+
+    <section id="stats-section">
+      <h2>统计报表</h2>
+      <button onclick="loadStats()">刷新统计</button>
+      <div id="stats"></div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let token = null;
+
+    function showStatus(id, message, isError = false) {
+      const el = document.getElementById(id);
+      el.textContent = message;
+      el.style.color = isError ? 'red' : 'green';
+    }
+
+    async function importStudents() {
+      try {
+        const students = JSON.parse(document.getElementById('students-json').value || '[]');
+        const defaultPassword = document.getElementById('default-password').value;
+        const res = await fetch(`${API_BASE}/api/auth/import`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ default_password: defaultPassword, students })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '导入失败');
+        showStatus('import-status', `成功导入 ${data.length} 人`);
+      } catch (err) {
+        showStatus('import-status', err.message, true);
+      }
+    }
+
+    async function login() {
+      try {
+        const student_no = document.getElementById('login-student-no').value;
+        const password = document.getElementById('login-password').value;
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_no, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '登陆失败');
+        token = data.token;
+        showStatus('login-status', `登陆成功，欢迎 ${data.student.name}`);
+      } catch (err) {
+        showStatus('login-status', err.message, true);
+      }
+    }
+
+    async function uploadReport() {
+      if (!token) return showStatus('upload-status', '请先登陆', true);
+      const fileInput = document.getElementById('report-file');
+      if (!fileInput.files.length) return showStatus('upload-status', '请选择docx文件', true);
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('token', token);
+      try {
+        const res = await fetch(`${API_BASE}/api/reports/upload?token=${token}`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '上传失败');
+        showStatus('upload-status', `评分: ${data.grade} 分，反馈已写入封面。报告ID ${data.report_id}`);
+      } catch (err) {
+        showStatus('upload-status', err.message, true);
+      }
+    }
+
+    async function loadStats() {
+      if (!token) return showStatus('stats', '请先登陆', true);
+      try {
+        const res = await fetch(`${API_BASE}/api/reports/stats?token=${token}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '统计获取失败');
+        const rows = data.submissions.map(s => `<tr><td>${s.student_no}</td><td>${s.name}</td><td>${s.grade}</td><td>${s.submitted_at}</td><td>${s.report_id}</td></tr>`).join('');
+        document.getElementById('stats').innerHTML = `
+          <p>总份数: ${data.total_reports}，平均分: ${data.average_grade.toFixed(2)}</p>
+          <table><thead><tr><th>学号</th><th>姓名</th><th>成绩</th><th>提交时间</th><th>报告ID</th></tr></thead><tbody>${rows}</tbody></table>
+        `;
+        showStatus('stats', '');
+      } catch (err) {
+        showStatus('stats', err.message, true);
+      }
+    }
+  </script>
+</body>
+</html>
