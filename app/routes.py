@@ -390,7 +390,9 @@ def submit_report(experiment_id: int):
         upload_folder = Path(current_app.config["UPLOAD_FOLDER"]).resolve()
         upload_folder.mkdir(parents=True, exist_ok=True)
         stored_path = (upload_folder / stored_name).resolve()
-        if not stored_path.is_relative_to(upload_folder):
+        try:
+            stored_path.relative_to(upload_folder)
+        except ValueError:
             flash("文件路径无效", "danger")
             return redirect(request.url)
         file.save(stored_path)
