@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
+import re
 
 import pandas as pd
 from flask import (
@@ -382,7 +383,10 @@ def submit_report(experiment_id: int):
 
         filename = secure_filename(file.filename)
         timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-        stored_name = f"{student.student_number}_{experiment_id}_{timestamp}_{filename}"
+        safe_student_number = re.sub(r"[^A-Za-z0-9_-]", "", student.student_number or "")
+        if not safe_student_number:
+            safe_student_number = str(student.id)
+        stored_name = f"{safe_student_number}_{experiment_id}_{timestamp}_{filename}"
         upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
         stored_path = upload_folder / stored_name
         file.save(stored_path)
