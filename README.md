@@ -30,6 +30,31 @@ flask --app app:create_app run --debug
 
 访问 <http://127.0.0.1:5000> 即可体验系统。首次运行时系统会自动创建默认管理员账号 `admin`/`admin123`。
 
+### 4. GitHub 下载与离线归档
+
+- 如需从 GitHub 获取源码，可直接运行：
+
+  ```bash
+  git clone https://github.com/mmlsam/Labreport.git
+  ```
+
+- 若因网络或权限原因无法从 GitHub 下载，可在已有仓库中运行 `scripts/package.sh` 生成当天日期命名的源码压缩包，随后将 `dist/` 目录中的压缩包上传或分发：
+
+  ```bash
+  ./scripts/package.sh
+  ```
+
+- 压缩包基于当前 Git 提交生成（不包含 `.git` 目录），确保与 GitHub 上的版本一致。
+
+### 5. 仓库结构与可见性
+
+- 代码全部在同一仓库内，无需子模块。关键文件位置：
+  - 应用入口与工厂：`app.py`、`app/__init__.py`
+  - 路由与业务逻辑：`app/routes.py`、`app/services.py`
+  - 数据模型：`app/models.py`
+  - 前端模板：`app/templates/`
+- 如果在 GitHub 页面只能看到 README，请确保切换到包含代码的分支（例如 `work` 或默认分支），或通过 “Code → Download ZIP” 下载完整源码。
+
 ## 功能说明
 
 ### 管理员
