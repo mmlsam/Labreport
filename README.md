@@ -11,6 +11,10 @@
 
 ### 1. 创建并激活虚拟环境（可选）
 
+兼容运行基线为 Python 3.8–3.12。Python 3.8 使用 pandas 2.0.3 和 NumPy < 2，
+Python 3.9 及以上保留 pandas 2.2.2；安装时由 requirements.txt 的环境标记选择。
+新部署建议使用仍在维护的 Python 版本。
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Windows 使用 .venv\\Scripts\\activate
@@ -29,6 +33,31 @@ flask --app app:create_app run --debug
 ```
 
 访问 <http://127.0.0.1:5000> 即可体验系统。首次运行时系统会自动创建默认管理员账号 `admin`/`admin123`。
+
+### 4. GitHub 下载与离线归档
+
+- 如需从 GitHub 获取源码，可直接运行：
+
+  ```bash
+  git clone https://github.com/mmlsam/Labreport.git
+  ```
+
+- 若因网络或权限原因无法从 GitHub 下载，可在已有仓库中运行 `scripts/package.sh` 生成当天日期命名的源码压缩包，随后将 `dist/` 目录中的压缩包上传或分发：
+
+  ```bash
+  ./scripts/package.sh
+  ```
+
+- 压缩包基于当前 Git 提交生成（不包含 `.git` 目录），确保与 GitHub 上的版本一致。
+
+### 5. 仓库结构与可见性
+
+- 代码全部在同一仓库内，无需子模块。关键文件位置：
+  - 应用入口与工厂：`app.py`、`app/__init__.py`
+  - 路由与业务逻辑：`app/routes.py`、`app/services.py`
+  - 数据模型：`app/models.py`
+  - 前端模板：`app/templates/`
+- 如果在 GitHub 页面只能看到 README，请确保切换到包含代码的分支（例如 `work` 或默认分支），或通过 “Code → Download ZIP” 下载完整源码。
 
 ## 功能说明
 
@@ -62,3 +91,8 @@ flask --app app:create_app run --debug
 ## 开源协议
 
 MIT License
+
+## 回归测试
+
+安装依赖后运行 `python -m unittest discover -s tests -v`。
+测试使用临时目录和内存数据库，不调用外部评分接口。

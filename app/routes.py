@@ -6,6 +6,7 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 import re
+from uuid import uuid4
 
 import pandas as pd
 from flask import (
@@ -37,6 +38,16 @@ AVAILABLE_LLM_MODELS = [
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def validated_storage_path(folder: str, filename: str) -> Path:
+    """Resolve symlinks and reject paths outside storage (including on Python 3.8)."""
+    root = Path(folder).resolve()
+    path = (root / filename).resolve()
+    path.relative_to(root)  # Raises ValueError; do not use Python 3.9's is_relative_to.
+    if path == root:
+        raise ValueError("Storage path must name a file")
+    return path
 
 
 def login_required(role: str):
@@ -386,9 +397,14 @@ def submit_report(experiment_id: int):
         safe_student_number = re.sub(r"[^A-Za-z0-9_-]", "", student.student_number or "")
         if not safe_student_number:
             safe_student_number = str(student.id)
-        stored_name = f"{safe_student_number}_{experiment_id}_{timestamp}_{filename}"
-        upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
-        stored_path = upload_folder / stored_name
+        stored_name = f"{safe_student_number}_{experiment_id}_{timestamp}_{uuid4().hex}_{filename}"
+        try:
+            stored_path = validated_storage_path(current_app.config["UPLOAD_FOLDER"], stored_name)
+            processed_path = validated_storage_path(current_app.config["PROCESSED_FOLDER"], stored_name)
+        except ValueError:
+            flash("文件路径无效", "danger")
+            return redirect(request.url)
+        stored_path.parent.mkdir(parents=True, exist_ok=True)
         file.save(stored_path)
 
         admin_settings = Admin.query.filter(Admin.llm_api_key.isnot(None)).first()
@@ -402,7 +418,7 @@ def submit_report(experiment_id: int):
             stored_path,
             score,
             feedback,
-            Path(current_app.config["PROCESSED_FOLDER"]) / stored_name,
+            processed_path,
         )
 
         if submission is None:
