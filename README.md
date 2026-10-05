@@ -11,6 +11,10 @@
 
 ### 1. 创建并激活虚拟环境（可选）
 
+兼容运行基线为 Python 3.8–3.12。Python 3.8 使用 pandas 2.0.3 和 NumPy < 2，
+Python 3.9 及以上保留 pandas 2.2.2；安装时由 requirements.txt 的环境标记选择。
+新部署建议使用仍在维护的 Python 版本。
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Windows 使用 .venv\\Scripts\\activate
@@ -87,3 +91,8 @@ flask --app app:create_app run --debug
 ## 开源协议
 
 MIT License
+
+## 回归测试
+
+安装依赖后运行 `python -m unittest discover -s tests -v`。
+测试使用临时目录和内存数据库，不调用外部评分接口。
